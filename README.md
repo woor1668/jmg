@@ -7,7 +7,7 @@
 ## 주요 기능
 
 - **즉시 공유** — 업로드 즉시 URL 생성, 클립보드 자동 복사
-- **폴더 관리** — 하위폴더 지원, 파일탐색기 UI에서 드래그앤드롭·벌크 이동·삭제
+- **폴더 관리** — 하위폴더 지원, 파일탐색기 UI에서 벌크 이동·삭제
 - **중복 방지** — SHA-256 해시로 같은 이미지 중복 업로드 차단
 - **썸네일 자동 생성** — 200/400/800px 리사이즈
 - **Slug URL** — `example.com/photos/sunset` 형태의 깔끔한 URL
@@ -20,16 +20,19 @@
 
 Go 1.22 · SQLite (modernc.org/sqlite) · 바닐라 HTML/CSS/JS
 
-## 시작하기
+## 빠른 시작
 
 ```bash
-cp config.example.yaml config.yaml   # 토큰 수정
-docker compose up -d                 # 또는: go build -o jmg . && ./jmg --config config.yaml
+docker run -d --name jmg --restart unless-stopped \
+  -p 8080:8080 \
+  -v $(pwd)/data:/app/data \
+  -e AUTH_TOKEN="your-token" \
+  ghcr.io/woor1668/jmg:latest
 ```
 
 `http://localhost:8080/admin/` 접속.
 
 ## 문서
 
-- [API 레퍼런스](docs/API.md)
 - [배포 가이드](docs/DEPLOY.md)
+- [API 레퍼런스](docs/API.md)

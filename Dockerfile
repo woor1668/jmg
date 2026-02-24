@@ -14,6 +14,9 @@ USER jmg
 WORKDIR /app
 COPY --from=builder /build/jmg .
 RUN mkdir -p /app/data
+
+LABEL org.opencontainers.image.source=https://github.com/woor1668/jmg
+
 EXPOSE 8080
 ENTRYPOINT ["./jmg"]
 CMD ["--config", "/app/config.yaml"]

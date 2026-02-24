@@ -1,5 +1,6 @@
 services:
   jmg:
+    image: ghcr.io/woor1668/jmg:latest
     build: .
     container_name: jmg
     restart: unless-stopped
