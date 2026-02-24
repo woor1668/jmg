@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JMG</title>
+<style>
+:root{--bg:#111;--s1:#1a1a1a;--s2:#222;--s3:#2a2a2a;--bd:#383838;--tx:#ddd;--tx2:#999;--ac:#4a9eff;--ach:#6bb3ff;--ok:#4caf50;--err:#ef5350;--r:6px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--tx);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{background:var(--s1);border-bottom:1px solid var(--bd);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+header h1{font-size:18px;font-weight:600} header h1 span{color:var(--ac)}
+.hdr-r{display:flex;gap:10px;align-items:center}
+.btn{padding:7px 14px;border:1px solid var(--bd);border-radius:var(--r);background:var(--s2);color:var(--tx);cursor:pointer;font-size:13px;transition:.15s;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.btn:hover{background:var(--s3)}.btn-p{background:var(--ac);border-color:var(--ac);color:#fff}.btn-p:hover{background:var(--ach)}
+.btn-d{border-color:var(--err);color:var(--err)}.btn-d:hover{background:var(--err);color:#fff}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+/* Auth */
+#auth{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:16px}
+#auth input[type=text]{width:320px;padding:12px 16px;background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);font-size:15px}
+.save-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--tx2)}
+.save-row input[type=checkbox]{accent-color:var(--ac);width:16px;height:16px}
+.auth-err{color:var(--err);font-size:13px;min-height:18px}
+
+/* Main layout */
+.main{display:flex;flex:1;overflow:hidden}
+.panel-left{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* Right panel - slide animation */
+.panel-right{width:360px;background:var(--s1);border-left:1px solid var(--bd);flex-direction:column;overflow:hidden;flex-shrink:0;
+ position:relative;transform:translateX(360px);opacity:0;display:flex;
+ margin-left:-360px;pointer-events:none;
+ transition:transform .28s cubic-bezier(.4,0,.2,1),opacity .28s ease,margin-left .28s cubic-bezier(.4,0,.2,1)}
+.panel-right.show{transform:translateX(0);opacity:1;margin-left:0;pointer-events:auto}
+
+/* Toolbar */
+.toolbar{background:var(--s1);border-bottom:1px solid var(--bd);padding:10px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-shrink:0}
+.bread{display:flex;gap:2px;align-items:center;font-size:14px;flex-wrap:wrap;margin-right:auto}
+.bread a{color:var(--ac);cursor:pointer;text-decoration:none;padding:2px 4px;border-radius:4px}.bread a:hover{background:var(--s3)}
+.bread .sep{color:var(--tx2);margin:0 2px}
+.bread .cur{color:var(--tx);font-weight:500}
+
+/* Upload zone */
+.upbar{background:var(--s2);border-bottom:1px solid var(--bd);padding:8px 16px;display:flex;gap:8px;align-items:center;flex-shrink:0}
+.upbar.over{background:rgba(74,158,255,.08)}
+.upres{background:var(--s2);border-bottom:1px solid var(--ok);padding:8px 16px;display:none;gap:8px;align-items:center;flex-shrink:0}
+.upres.show{display:flex}
+.upres input{flex:1;padding:6px 10px;background:var(--s3);border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);font-family:monospace;font-size:13px}
+
+/* File list */
+.file-list{flex:1;overflow-y:auto}
+.fl-head{display:grid;grid-template-columns:36px 1fr 120px 100px 180px 80px;padding:8px 16px;font-size:13px;color:var(--tx2);border-bottom:1px solid var(--bd);background:var(--s1);position:sticky;top:0;z-index:5}
+.fl-row{display:grid;grid-template-columns:36px 1fr 120px 100px 180px 80px;padding:8px 16px;font-size:14px;border-bottom:1px solid #222;cursor:pointer;align-items:center;transition:background .1s}
+.fl-row:hover{background:var(--s2)}
+.fl-row.selected{background:rgba(74,158,255,.1)}
+.fl-row .name{display:flex;align-items:center;gap:8px;min-width:0}
+.fl-row .name span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fl-row .name .icon{font-size:20px;flex-shrink:0}
+.fl-row .name a{color:var(--ac);text-decoration:none}.fl-row .name a:hover{text-decoration:underline}
+.fl-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--ac);cursor:pointer}
+.fl-row .acts{opacity:0;transition:opacity .15s;display:flex;flex-direction:row;gap:2px}.fl-row:hover .acts{opacity:1}
+
+/* Preview panel content */
+.preview-img{width:100%;max-height:300px;object-fit:contain;background:#000;display:block}
+.preview-info{padding:16px;overflow-y:auto;flex:1}
+.preview-info h3{font-size:16px;margin-bottom:12px;word-break:break-all}
+.preview-info .field{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px}
+.preview-info .field .label{color:var(--tx2)}.preview-info .field .val{color:var(--tx);text-align:right;word-break:break-all}
+.preview-actions{padding:12px 16px;border-top:1px solid var(--bd);display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
+
+/* Rename inline */
+.ren-in{padding:3px 6px;background:var(--s3);border:1px solid var(--ac);border-radius:4px;color:var(--tx);font-size:14px;outline:none;width:200px}
+
+/* Dialogs */
+.dlg-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:700;display:none;align-items:center;justify-content:center}
+.dlg-bg.show{display:flex}
+.dlg{background:var(--s1);border:1px solid var(--bd);border-radius:8px;padding:24px;min-width:360px;max-width:90vw}
+.dlg h3{margin-bottom:14px;font-size:16px}
+.dlg input{width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);font-size:14px;margin-bottom:12px}
+.dlg .btns{display:flex;gap:8px;justify-content:flex-end}
+
+/* Misc */
+.empty{text-align:center;padding:60px 20px;color:var(--tx2);font-size:15px}
+.empty .ic{font-size:48px;margin-bottom:12px}
+.pagi{padding:12px 16px;display:flex;justify-content:center;gap:6px;border-top:1px solid var(--bd);flex-shrink:0}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--ok);color:#fff;padding:10px 20px;border-radius:var(--r);font-size:13px;opacity:0;transform:translateY(8px);transition:.3s;z-index:1000}
+.toast.show{opacity:1;transform:translateY(0)}
+.prog{height:3px;background:var(--ac);border-radius:2px;transition:width .3s;position:fixed;top:0;left:0;z-index:200;display:none}.prog.on{display:block}
+.sel-info{font-size:13px;color:var(--tx2)}
+
+@media(max-width:900px){.panel-right{width:100%;position:fixed;right:0;top:44px;bottom:0;z-index:50;margin-left:0;transform:translateX(100%)}.panel-right.show{transform:translateX(0)}}
+</style>
+</head>
+<body>
+<div class="prog" id="prog"></div>
+<header>
+ <h1>🖼️ <span>JMG</span></h1>
+ <div class="hdr-r">
+  <span id="stats" style="font-size:13px;color:var(--tx2);display:none"></span>
+  <button class="btn btn-sm" onclick="logout()" id="logoutBtn" style="display:none">로그아웃</button>
+ </div>
+</header>
+
+<div id="auth">
+ <h2 style="font-size:20px">🔑 API 토큰 입력</h2>
+ <input type="password" id="tokIn" placeholder="토큰을 입력하세요..." onkeydown="if(event.key==='Enter')doAuth()">
+ <label class="save-row">
+  <input type="checkbox" id="saveTok" checked>
+  토큰 저장하기
+ </label>
+ <div class="auth-err" id="authErr"></div>
+ <button class="btn btn-p" onclick="doAuth()" style="padding:10px 28px;font-size:15px">접속</button>
+</div>
+
+<div class="main" id="app" style="display:none">
+ <div class="panel-left">
+  <div class="toolbar">
+   <div class="bread" id="bread"></div>
+   <button class="btn btn-sm" onclick="showNewFolderDlg()">📁 새 폴더</button>
+   <button class="btn btn-sm btn-p" onclick="fi.click()">⬆ 업로드</button>
+  </div>
+  <div class="upbar" id="dz">
+   <span style="font-size:13px;color:var(--tx2)">📎 파일을 여기에 드래그하거나 Ctrl+V로 붙여넣기</span>
+  </div>
+  <input type="file" id="fi" accept="image/*" multiple hidden>
+  <div class="upres" id="ur">
+   <input type="text" id="rurl" readonly>
+   <button class="btn btn-sm" onclick="cpRurl()">📋 복사</button>
+   <button class="btn btn-sm" onclick="$('ur').classList.remove('show')">✕</button>
+  </div>
+  <div class="toolbar" id="selBar" style="display:none;background:var(--s2)">
+   <span class="sel-info" id="selInfo"></span>
+   <button class="btn btn-sm" onclick="selectAll()">전체선택</button>
+   <button class="btn btn-sm" onclick="deselectAll()">해제</button>
+   <button class="btn btn-sm" onclick="showMoveDlg()">📁 이동</button>
+   <button class="btn btn-sm btn-d" onclick="bulkDel()">🗑 삭제</button>
+  </div>
+  <div class="file-list" id="fileList">
+   <div class="fl-head">
+    <div><input type="checkbox" id="chkAll" onchange="toggleAll(this.checked)"></div>
+    <div>이름</div><div>타입</div><div>크기</div><div>수정일</div><div></div>
+   </div>
+   <div id="rows"></div>
+  </div>
+  <div class="pagi" id="pagi"></div>
+ </div>
+ <div class="panel-right" id="preview">
+  <div style="padding:10px 14px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">
+   <b style="font-size:14px">미리보기</b>
+   <button class="btn btn-sm" onclick="closePreview()">✕</button>
+  </div>
+  <img class="preview-img" id="pvImg" src="">
+  <div class="preview-info" id="pvInfo"></div>
+  <div class="preview-actions" id="pvActs"></div>
+ </div>
+</div>
+
+<!-- Dialogs -->
+<div class="dlg-bg" id="nfDlg" onclick="if(event.target===this)this.classList.remove('show')">
+ <div class="dlg">
+  <h3>📁 새 폴더 만들기</h3>
+  <input id="nfInput" placeholder="폴더명 (예: photos/2024/summer)" onkeydown="if(event.key==='Enter')doNewFolder()">
+  <div class="btns"><button class="btn" onclick="$('nfDlg').classList.remove('show')">취소</button><button class="btn btn-p" onclick="doNewFolder()">만들기</button></div>
+ </div>
+</div>
+<div class="dlg-bg" id="frDlg" onclick="if(event.target===this)this.classList.remove('show')">
+ <div class="dlg">
+  <h3>✏️ 폴더명 변경</h3>
+  <input id="frOld" readonly style="opacity:.5">
+  <input id="frNew" placeholder="새 폴더명..." onkeydown="if(event.key==='Enter')doFolderRename()">
+  <div class="btns"><button class="btn" onclick="$('frDlg').classList.remove('show')">취소</button><button class="btn btn-p" onclick="doFolderRename()">변경</button></div>
+ </div>
+</div>
+<div class="dlg-bg" id="mvDlg" onclick="if(event.target===this)this.classList.remove('show')">
+ <div class="dlg">
+  <h3>📁 이동할 폴더</h3>
+  <input id="mvTo" placeholder="폴더 경로 (비우면 루트)" onkeydown="if(event.key==='Enter')doBulkMove()">
+  <div class="btns"><button class="btn" onclick="$('mvDlg').classList.remove('show')">취소</button><button class="btn btn-p" onclick="doBulkMove()">이동</button></div>
+ </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API=location.origin;
+let tok=localStorage.getItem('jmg_tok')||'';
+let curFolder='',curPage=1,imgs=[],childFolders=[];
+let selected=new Set(),pvItem=null;
+
+const $=id=>document.getElementById(id);
+const af=(p,o={})=>{o.headers={...o.headers,'Authorization':'Bearer '+tok};return fetch(API+p,o)};
+
+// === Auth ===
+function doAuth(){
+ let v=$('tokIn').value.trim();
+ if(!v){
+  const saved=localStorage.getItem('jmg_tok');
+  if(saved){v=saved}
+  else{$('authErr').textContent='토큰을 입력하세요';return}
+ }
+ tok=v;
+ $('authErr').textContent='';
+ if($('saveTok').checked) localStorage.setItem('jmg_tok',tok);
+ else localStorage.removeItem('jmg_tok');
+ chkAuth();
+}
+function logout(){
+ tok='';sessionStorage.removeItem('jmg_logged_in');
+ $('auth').style.display='flex';$('app').style.display='none';$('logoutBtn').style.display='none';
+ $('stats').style.display='none';
+ const saved=localStorage.getItem('jmg_tok');
+ $('tokIn').value=saved||'';
+ $('authErr').textContent='';
+}
+async function chkAuth(){
+ try{
+  const r=await af('/api/folders');
+  if(r.ok){
+   $('auth').style.display='none';$('app').style.display='flex';$('logoutBtn').style.display='inline-block';$('stats').style.display='inline';
+   sessionStorage.setItem('jmg_logged_in','1');
+   load();
+  }else{
+   $('authErr').textContent='잘못된 토큰입니다';
+   $('auth').style.display='flex';$('app').style.display='none';
+   tok='';localStorage.removeItem('jmg_tok');
+  }
+ }catch{$('authErr').textContent='서버에 연결할 수 없습니다';$('auth').style.display='flex'}
+}
+
+// === Upload ===
+const dz=$('dz'),fi=$('fi');
+dz.onclick=()=>fi.click();
+dz.ondragover=e=>{e.preventDefault();dz.classList.add('over')};
+dz.ondragleave=()=>dz.classList.remove('over');
+dz.ondrop=e=>{e.preventDefault();dz.classList.remove('over');upFiles(e.dataTransfer.files)};
+fi.onchange=e=>{upFiles(e.target.files);fi.value=''};
+document.addEventListener('paste',e=>{
+ if(['INPUT','TEXTAREA'].includes(document.activeElement?.tagName))return;
+ for(const i of(e.clipboardData?.items||[]))if(i.type.startsWith('image/')){e.preventDefault();upFiles([i.getAsFile()]);return}
+});
+
+let lastUp=null;
+async function upFiles(files){for(const f of files)if(f?.type.startsWith('image/'))await upOne(f)}
+async function upOne(file){
+ const pg=$('prog');pg.style.width='40%';pg.classList.add('on');
+ const fd=new FormData();fd.append('file',file);
+ if(curFolder)fd.append('folder',curFolder);
+ try{
+  pg.style.width='70%';
+  const r=await af('/api/upload',{method:'POST',body:fd}),d=await r.json();
+  if(r.ok){lastUp=d;$('rurl').value=d.url;$('ur').classList.add('show');
+   navigator.clipboard.writeText(d.url).catch(()=>{});
+   toast('✅ 업로드 완료!');pg.style.width='100%';setTimeout(()=>{pg.classList.remove('on');pg.style.width='0'},400);load()}
+  else{toast('❌ '+(d.error||'실패'),1);pg.classList.remove('on')}
+ }catch{toast('❌ 네트워크 오류',1);pg.classList.remove('on')}
+}
+function cpRurl(){navigator.clipboard.writeText($('rurl').value);toast('📋 복사!')}
+
+// === Load ===
+async function load(){selected.clear();updateSel();await Promise.all([loadFolders(),loadContent()])}
+async function loadFolders(){
+ try{const r=await af('/api/folders'),d=await r.json();
+  const total=d.root_count+(d.folders||[]).reduce((s,f)=>s+f.count,0);
+  $('stats').textContent=total+'장'}catch{}
+}
+async function loadContent(){
+ const rows=$('rows');rows.innerHTML='<div class="empty">불러오는 중...</div>';
+ try{
+  const fp=curFolder?'/'+curFolder:'';
+  const r=await af(`/api/browse${fp}?page=${curPage}&limit=100`),d=await r.json();
+  imgs=d.images||[];childFolders=d.child_folders||[];
+  renderBread();renderRows(d);renderPagi(d);
+ }catch{rows.innerHTML='<div class="empty"><div class="ic">⚠️</div>로드 실패</div>'}
+}
+
+function renderBread(){
+ const b=$('bread');
+ if(!curFolder){b.innerHTML='<span class="cur">.</span>';return}
+ let h='<a onclick="nav(\'\')">.</a>';
+ const parts=curFolder.split('/');let path='';
+ parts.forEach((p,i)=>{path+=(i?'/':'')+p;
+  h+='<span class="sep">/</span>';
+  if(i<parts.length-1)h+=`<a onclick="nav('${path}')">${p}</a>`;
+  else h+=`<span class="cur">${p}</span>`;
+ });
+ b.innerHTML=h;
+}
+
+function renderRows(d){
+ const rows=$('rows');let h='';
+ for(const f of childFolders){
+  const short=f.split('/').pop();
+  h+=`<div class="fl-row" ondblclick="nav('${f}')">
+   <div></div>
+   <div class="name"><span class="icon">📁</span><a onclick="nav('${f}')">${esc(short)}/</a></div>
+   <div style="color:var(--tx2)">폴더</div><div style="color:var(--tx2)">—</div><div style="color:var(--tx2)">—</div>
+   <div class="acts">
+    <button class="btn btn-sm" onclick="event.stopPropagation();showFrDlg('${f}')" title="이름변경">✏️</button>
+    <button class="btn btn-sm btn-d" onclick="event.stopPropagation();delFolder('${f}')" title="삭제">🗑</button>
+   </div>
+  </div>`;
+ }
+ for(const m of imgs){
+  const date=m.created_at?new Date(m.created_at).toLocaleString('ko-KR',{dateStyle:'medium',timeStyle:'short'}):'';
+  h+=`<div class="fl-row ${selected.has(m.id)?'selected':''}" data-id="${m.id}" onclick="clickRow(event,'${m.id}')">
+   <div><input type="checkbox" ${selected.has(m.id)?'checked':''} onchange="event.stopPropagation();toggleSel('${m.id}')" onclick="event.stopPropagation()"></div>
+   <div class="name"><span class="icon">🖼️</span><span id="name-${m.id}" ondblclick="event.stopPropagation();startRen('${m.id}','${esc(m.slug)}')">${esc(m.slug)}</span></div>
+   <div style="color:var(--tx2)">${m.mime_type.replace('image/','')}</div>
+   <div>${fmtSz(m.size)}</div>
+   <div style="color:var(--tx2);font-size:12px">${date}</div>
+   <div class="acts">
+    <button class="btn btn-sm" onclick="event.stopPropagation();cpUrl('${m.url}')" title="URL 복사">📋</button>
+   </div>
+  </div>`;
+ }
+ if(!childFolders.length&&!imgs.length)h='<div class="empty"><div class="ic">📭</div>비어있음</div>';
+ rows.innerHTML=h;
+}
+
+function nav(folder){curFolder=folder;curPage=1;closePreview();load()}
+
+function clickRow(e,id){
+ if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON')return;
+ const img=imgs.find(m=>m.id===id);if(img)showPreview(img);
+}
+
+// === Preview ===
+function showPreview(img){
+ pvItem=img;
+ $('pvImg').src=img.url;
+ $('pvInfo').innerHTML=`
+  <h3>${esc(img.slug)}</h3>
+  <div class="field"><span class="label">원본파일</span><span class="val">${esc(img.original_name)}</span></div>
+  <div class="field"><span class="label">타입</span><span class="val">${img.mime_type}</span></div>
+  <div class="field"><span class="label">크기</span><span class="val">${fmtSz(img.size)}</span></div>
+  ${img.width?`<div class="field"><span class="label">해상도</span><span class="val">${img.width}×${img.height}</span></div>`:''}
+  <div class="field"><span class="label">폴더</span><span class="val">${img.folder||'/'}</span></div>
+  <div class="field"><span class="label">URL</span><span class="val" style="font-size:11px;word-break:break-all">${img.url}</span></div>`;
+ $('pvActs').innerHTML=`
+  <button class="btn btn-sm" onclick="cpUrl('${img.url}')">📋 URL</button>
+  <button class="btn btn-sm" onclick="window.open('${img.url}','_blank')">🔗 새탭</button>
+  <button class="btn btn-sm" onclick="startRen('${img.id}','${esc(img.slug)}')">✏️ 이름변경</button>
+  <button class="btn btn-sm btn-d" onclick="delOne('${img.id}')">🗑 삭제</button>`;
+ $('preview').classList.add('show');
+}
+function closePreview(){$('preview').classList.remove('show');pvItem=null}
+
+// === Selection ===
+function toggleSel(id){
+ selected.has(id)?selected.delete(id):selected.add(id);
+ const row=document.querySelector(`.fl-row[data-id="${id}"]`);
+ if(row){row.classList.toggle('selected',selected.has(id));row.querySelector('input[type=checkbox]').checked=selected.has(id)}
+ updateSel();
+}
+function selectAll(){imgs.forEach(m=>selected.add(m.id));rerenderChecks();updateSel()}
+function deselectAll(){selected.clear();rerenderChecks();updateSel()}
+function toggleAll(c){if(c)selectAll();else deselectAll()}
+function rerenderChecks(){document.querySelectorAll('.fl-row[data-id]').forEach(r=>{
+ const id=r.dataset.id;r.classList.toggle('selected',selected.has(id));
+ const c=r.querySelector('input[type=checkbox]');if(c)c.checked=selected.has(id)});
+ $('chkAll').checked=selected.size===imgs.length&&imgs.length>0}
+function updateSel(){
+ $('selBar').style.display=selected.size?'flex':'none';
+ $('selInfo').textContent=selected.size+'개 선택';
+ $('chkAll').checked=selected.size===imgs.length&&imgs.length>0;
+}
+
+// === Rename ===
+function startRen(id,cur){
+ const el=$('name-'+id);if(!el||el.querySelector('input'))return;
+ el.innerHTML=`<input class="ren-in" value="${cur.replace(/"/g,'&quot;')}" onblur="finRen(this,'${id}')" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.dataset.x='1';this.blur()}">`;
+ el.querySelector('input').select();
+}
+async function finRen(inp,id){
+ if(inp.dataset.x==='1'){loadContent();return}
+ const v=inp.value.trim();if(!v){loadContent();return}
+ try{
+  const r=await af('/api/images',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,action:'rename',slug:v})});
+  if(r.ok){toast('✏️ 변경됨');load()}else{const d=await r.json();toast('❌ '+(d.error||'실패'),1);loadContent()}
+ }catch{toast('❌ 오류',1);loadContent()}
+}
+
+// === Delete ===
+async function delOne(id){
+ if(!confirm('삭제하시겠습니까?'))return;
+ try{await af(`/api/images?id=${id}`,{method:'DELETE'});toast('🗑 삭제됨');closePreview();load()}catch{toast('❌ 실패',1)}
+}
+async function bulkDel(){
+ if(!selected.size)return;if(!confirm(selected.size+'개를 삭제하시겠습니까?'))return;
+ try{await af('/api/bulk-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:[...selected]})});
+  toast('🗑 '+selected.size+'개 삭제됨');selected.clear();closePreview();load()}catch{toast('❌ 실패',1)}
+}
+
+// === Folder ops ===
+function showNewFolderDlg(){$('nfInput').value=curFolder?(curFolder+'/'):'';$('nfDlg').classList.add('show');$('nfInput').focus()}
+async function doNewFolder(){
+ const p=$('nfInput').value.trim();if(!p)return;
+ try{const r=await af('/api/folder-create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:p})});
+  if(r.ok){toast('📁 폴더 생성됨');$('nfDlg').classList.remove('show');load()}
+  else{const d=await r.json();toast('❌ '+(d.error||'실패'),1)}}catch{toast('❌ 실패',1)}
+}
+
+function showFrDlg(p){$('frOld').value=p;$('frNew').value=p;$('frDlg').classList.add('show');$('frNew').focus()}
+async function doFolderRename(){
+ const o=$('frOld').value,n=$('frNew').value.trim();if(!n)return;
+ try{await af('/api/folder-rename',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({old_name:o,new_name:n})});
+  toast('✏️ 폴더명 변경됨');$('frDlg').classList.remove('show');if(curFolder===o||curFolder.startsWith(o+'/'))curFolder=n+curFolder.slice(o.length);load()}
+ catch{toast('❌ 실패',1)}
+}
+async function delFolder(p){
+ if(!confirm(`"${p}" 폴더를 삭제하시겠습니까?`))return;
+ try{await af('/api/folder-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:p})});
+  toast('🗑 삭제됨');load()}catch{toast('❌ 실패',1)}
+}
+
+// === Move ===
+function showMoveDlg(){if(!selected.size){toast('선택된 이미지 없음',1);return}$('mvTo').value=curFolder;$('mvDlg').classList.add('show');$('mvTo').focus()}
+async function doBulkMove(){
+ const f=$('mvTo').value.trim();
+ try{await af('/api/bulk-move',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:[...selected],folder:f})});
+  toast('📁 '+selected.size+'개 이동됨');selected.clear();$('mvDlg').classList.remove('show');load()}catch{toast('❌ 실패',1)}
+}
+
+// === Pagination ===
+function renderPagi(d){const p=$('pagi');if(!d.pages||d.pages<=1){p.innerHTML='';return}
+ let h='';if(curPage>1)h+=`<button class="btn btn-sm" onclick="goP(${curPage-1})">◀</button>`;
+ h+=`<span style="font-size:13px;color:var(--tx2);padding:4px 8px">${curPage}/${d.pages}</span>`;
+ if(curPage<d.pages)h+=`<button class="btn btn-sm" onclick="goP(${curPage+1})">▶</button>`;p.innerHTML=h}
+function goP(p){curPage=p;loadContent();$('fileList').scrollTop=0}
+
+// === Utils ===
+function cpUrl(t){navigator.clipboard.writeText(t.startsWith('/')?location.origin+t:t);toast('📋 URL 복사됨!')}
+function fmtSz(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB'}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function toast(m,e){const t=$('toast');t.textContent=m;t.style.background=e?'var(--err)':'var(--ok)';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closePreview()});
+
+// === Init ===
+const saved=localStorage.getItem('jmg_tok');
+if(saved){$('tokIn').value=saved;}
+if(saved && sessionStorage.getItem('jmg_logged_in')){tok=saved;chkAuth()}
+</script>
+</body>
+</html>

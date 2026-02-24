@@ -1,0 +1,38 @@
+# ImgHost Configuration
+# 환경변수로도 오버라이드 가능: AUTH_TOKEN, BASE_URL, PORT, DATA_DIR, HOST, PUBLIC_BROWSE
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  # 외부에서 접근하는 URL (Cloudflare Tunnel, Tailscale 등)
+  # 비워두면 http://host:port 사용
+  base_url: ""
+
+storage:
+  data_dir: "./data"
+  max_file_size: 52428800  # 50MB in bytes
+  allowed_types:
+    - "image/png"
+    - "image/jpeg"
+    - "image/gif"
+    - "image/webp"
+    - "image/svg+xml"
+    - "image/avif"
+    - "image/bmp"
+    - "image/tiff"
+
+thumbnail:
+  enabled: true
+  sizes: [200, 400, 800]
+  format: "jpeg"
+  quality: 80
+
+auth:
+  # 필수! 환경변수 AUTH_TOKEN 으로도 설정 가능
+  token: "change-me-to-a-secure-token"
+  # true면 갤러리(browse)를 인증 없이 볼 수 있음
+  public_browse: false
+
+id:
+  length: 6
+  alphabet: "0123456789abcdefghijklmnopqrstuvwxyz"

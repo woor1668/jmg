@@ -1,0 +1,28 @@
+# Binary
+jmg
+jmg.exe
+jmg-*
+
+# Data (volume mount)
+data/images/
+data/thumbnails/
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Config with secrets
+config.yaml
+.env
+
+# Test
+test_*.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
