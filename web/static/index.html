@@ -270,11 +270,22 @@ async function readEntries(entry,path=''){
 
 async function upEntries(entries){
  let allFiles=[];
+ const emptyDirs=[];
  for(const ent of entries){
-  if(ent.isDirectory){allFiles.push(...await readEntries(ent,ent.name))}
-  else{allFiles.push(...await readEntries(ent,''))}
+  if(ent.isDirectory){
+   const files=await readEntries(ent,ent.name);
+   allFiles.push(...files);
+   // Collect empty dirs
+   const dirs=await collectDirs(ent,ent.name);
+   for(const d of dirs)emptyDirs.push(d);
+  }else{allFiles.push(...await readEntries(ent,''))}
  }
- if(!allFiles.length){toast('이미지 파일이 없습니다',1);return}
+ // Create empty folders first
+ for(const d of emptyDirs){
+  const target=curFolder?curFolder+'/'+d:d;
+  await af('/api/folder-create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:target})});
+ }
+ if(!allFiles.length){toast('📂 빈 폴더 생성됨');load();return}
  toast(`📂 ${allFiles.length}개 이미지 업로드 중...`);
  let ok=0;
  for(const{file,relPath}of allFiles){
@@ -286,6 +297,17 @@ async function upEntries(entries){
  load();
 }
 
+async function collectDirs(entry,path){
+ const dirs=[path];
+ if(!entry.isDirectory)return[];
+ const reader=entry.createReader();
+ let batch;
+ do{batch=await new Promise((res,rej)=>reader.readEntries(res,rej));
+  for(const e of batch){if(e.isDirectory){dirs.push(...await collectDirs(e,path+'/'+e.name))}}
+ }while(batch.length>0);
+ return dirs;
+}
+
 function isImageFile(f){
  if(f.type&&f.type.startsWith('image/'))return true;
  const ext=(f.name||'').split('.').pop().toLowerCase();
@@ -294,17 +316,28 @@ function isImageFile(f){
 
 function upFolderFiles(fileList){
  const items=[];
+ const folderSet=new Set();
  for(const f of fileList){
-  if(!isImageFile(f))continue;
   const rel=f.webkitRelativePath||f.name;
   const parts=rel.split('/');
+  // Collect all folder paths including empty ones
+  for(let i=1;i<parts.length;i++){
+   const fp=parts.slice(0,i).join('/');
+   const target=curFolder?curFolder+'/'+fp:fp;
+   folderSet.add(target);
+  }
+  if(!isImageFile(f))continue;
   const folder=parts.length>1?parts.slice(0,-1).join('/'):'';
   const target=curFolder&&folder?curFolder+'/'+folder:curFolder||folder;
   items.push({file:f,folder:target});
  }
- if(!items.length){toast('이미지 파일이 없습니다',1);return}
- toast(`📂 ${items.length}개 이미지 업로드 중...`);
+ // Create all folders first (including empty ones)
  (async()=>{
+  for(const fp of folderSet){
+   await af('/api/folder-create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:fp})});
+  }
+  if(!items.length){toast('📂 폴더 생성됨');load();return}
+  toast(`📂 ${items.length}개 이미지 업로드 중...`);
   let ok=0;
   for(const{file,folder}of items)if(await upOne(file,folder))ok++;
   toast(`✅ ${ok}/${items.length}개 업로드 완료`);
