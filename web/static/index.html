@@ -257,7 +257,7 @@ async function readEntries(entry,path=''){
  const files=[];
  if(entry.isFile){
   const f=await new Promise(r=>entry.file(r));
-  if(f.type.startsWith('image/'))files.push({file:f,relPath:path});
+  if(isImageFile(f))files.push({file:f,relPath:path});
  }else if(entry.isDirectory){
   const reader=entry.createReader();
   let batch;
@@ -286,10 +286,16 @@ async function upEntries(entries){
  load();
 }
 
+function isImageFile(f){
+ if(f.type&&f.type.startsWith('image/'))return true;
+ const ext=(f.name||'').split('.').pop().toLowerCase();
+ return['png','jpg','jpeg','gif','webp','svg','avif','bmp','tiff','ico'].includes(ext);
+}
+
 function upFolderFiles(fileList){
  const items=[];
  for(const f of fileList){
-  if(!f.type.startsWith('image/'))continue;
+  if(!isImageFile(f))continue;
   const rel=f.webkitRelativePath||f.name;
   const parts=rel.split('/');
   const folder=parts.length>1?parts.slice(0,-1).join('/'):'';
@@ -308,7 +314,7 @@ function upFolderFiles(fileList){
 
 let lastUp=null;
 async function upFiles(files){
- for(const f of files)if(f?.type.startsWith('image/'))await upOne(f);
+ for(const f of files)if(isImageFile(f))await upOne(f);
  load();
 }
 async function upOne(file,folder){
