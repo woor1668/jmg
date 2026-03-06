@@ -119,11 +119,13 @@ header h1{font-size:18px;font-weight:600} header h1 span{color:var(--ac)}
    <div class="bread" id="bread"></div>
    <button class="btn btn-sm" onclick="showNewFolderDlg()">📁 새 폴더</button>
    <button class="btn btn-sm btn-p" onclick="fi.click()">⬆ 업로드</button>
+   <button class="btn btn-sm" onclick="fdi.click()">📂 폴더 업로드</button>
   </div>
   <div class="upbar" id="dz">
-   <span style="font-size:13px;color:var(--tx2)">📎 파일을 여기에 드래그하거나 Ctrl+V로 붙여넣기</span>
+   <span style="font-size:13px;color:var(--tx2)">📎 파일/폴더를 드래그하거나 Ctrl+V로 붙여넣기</span>
   </div>
   <input type="file" id="fi" accept="image/*" multiple hidden>
+  <input type="file" id="fdi" webkitdirectory multiple hidden>
   <div class="upres" id="ur">
    <input type="text" id="rurl" readonly>
    <button class="btn btn-sm" onclick="cpRurl()">📋 복사</button>
@@ -229,31 +231,96 @@ async function chkAuth(){
 }
 
 // === Upload ===
-const dz=$('dz'),fi=$('fi');
+const dz=$('dz'),fi=$('fi'),fdi=$('fdi');
 dz.onclick=()=>fi.click();
 dz.ondragover=e=>{e.preventDefault();dz.classList.add('over')};
 dz.ondragleave=()=>dz.classList.remove('over');
-dz.ondrop=e=>{e.preventDefault();dz.classList.remove('over');upFiles(e.dataTransfer.files)};
+dz.ondrop=async e=>{
+ e.preventDefault();dz.classList.remove('over');
+ const items=e.dataTransfer.items;
+ if(items&&items.length){
+  const entries=[];
+  for(const item of items){const ent=item.webkitGetAsEntry&&item.webkitGetAsEntry();if(ent)entries.push(ent)}
+  if(entries.some(e=>e.isDirectory)){await upEntries(entries);return}
+ }
+ upFiles(e.dataTransfer.files);
+};
 fi.onchange=e=>{upFiles(e.target.files);fi.value=''};
+fdi.onchange=e=>{upFolderFiles(e.target.files);fdi.value=''};
 document.addEventListener('paste',e=>{
  if(['INPUT','TEXTAREA'].includes(document.activeElement?.tagName))return;
  for(const i of(e.clipboardData?.items||[]))if(i.type.startsWith('image/')){e.preventDefault();upFiles([i.getAsFile()]);return}
 });
 
+// Recursively read directory entries
+async function readEntries(entry,path=''){
+ const files=[];
+ if(entry.isFile){
+  const f=await new Promise(r=>entry.file(r));
+  if(f.type.startsWith('image/'))files.push({file:f,relPath:path});
+ }else if(entry.isDirectory){
+  const reader=entry.createReader();
+  let batch;
+  do{batch=await new Promise((res,rej)=>reader.readEntries(res,rej));
+   for(const e of batch){const sub=await readEntries(e,path?path+'/'+e.name:e.name);files.push(...sub)}}
+  while(batch.length>0);
+ }
+ return files;
+}
+
+async function upEntries(entries){
+ let allFiles=[];
+ for(const ent of entries){allFiles.push(...await readEntries(ent))}
+ if(!allFiles.length){toast('이미지 파일이 없습니다',1);return}
+ toast(`📂 ${allFiles.length}개 이미지 업로드 중...`);
+ let ok=0;
+ for(const{file,relPath}of allFiles){
+  const folder=relPath?relPath.split('/').slice(0,-1).join('/'):'';
+  const target=curFolder&&folder?curFolder+'/'+folder:curFolder||folder;
+  if(await upOne(file,target))ok++;
+ }
+ toast(`✅ ${ok}/${allFiles.length}개 업로드 완료`);
+ load();
+}
+
+function upFolderFiles(fileList){
+ const items=[];
+ for(const f of fileList){
+  if(!f.type.startsWith('image/'))continue;
+  const rel=f.webkitRelativePath||f.name;
+  const parts=rel.split('/');
+  const folder=parts.length>1?parts.slice(0,-1).join('/'):'';
+  const target=curFolder&&folder?curFolder+'/'+folder:curFolder||folder;
+  items.push({file:f,folder:target});
+ }
+ if(!items.length){toast('이미지 파일이 없습니다',1);return}
+ toast(`📂 ${items.length}개 이미지 업로드 중...`);
+ (async()=>{
+  let ok=0;
+  for(const{file,folder}of items)if(await upOne(file,folder))ok++;
+  toast(`✅ ${ok}/${items.length}개 업로드 완료`);
+  load();
+ })();
+}
+
 let lastUp=null;
-async function upFiles(files){for(const f of files)if(f?.type.startsWith('image/'))await upOne(f)}
-async function upOne(file){
+async function upFiles(files){
+ for(const f of files)if(f?.type.startsWith('image/'))await upOne(f);
+ load();
+}
+async function upOne(file,folder){
+ if(!folder&&folder!=='')folder=curFolder;
  const pg=$('prog');pg.style.width='40%';pg.classList.add('on');
  const fd=new FormData();fd.append('file',file);
- if(curFolder)fd.append('folder',curFolder);
+ if(folder)fd.append('folder',folder);
  try{
   pg.style.width='70%';
   const r=await af('/api/upload',{method:'POST',body:fd}),d=await r.json();
   if(r.ok){lastUp=d;$('rurl').value=d.url;$('ur').classList.add('show');
    navigator.clipboard.writeText(d.url).catch(()=>{});
-   toast('✅ 업로드 완료!');pg.style.width='100%';setTimeout(()=>{pg.classList.remove('on');pg.style.width='0'},400);load()}
-  else{toast('❌ '+(d.error||'실패'),1);pg.classList.remove('on')}
- }catch{toast('❌ 네트워크 오류',1);pg.classList.remove('on')}
+   pg.style.width='100%';setTimeout(()=>{pg.classList.remove('on');pg.style.width='0'},400);return true}
+  else{toast('❌ '+(d.error||'실패'),1);pg.classList.remove('on');return false}
+ }catch{toast('❌ 네트워크 오류',1);pg.classList.remove('on');return false}
 }
 function cpRurl(){navigator.clipboard.writeText($('rurl').value);toast('📋 복사!')}
 
