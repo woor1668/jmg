@@ -270,7 +270,10 @@ async function readEntries(entry,path=''){
 
 async function upEntries(entries){
  let allFiles=[];
- for(const ent of entries){allFiles.push(...await readEntries(ent))}
+ for(const ent of entries){
+  if(ent.isDirectory){allFiles.push(...await readEntries(ent,ent.name))}
+  else{allFiles.push(...await readEntries(ent,''))}
+ }
  if(!allFiles.length){toast('이미지 파일이 없습니다',1);return}
  toast(`📂 ${allFiles.length}개 이미지 업로드 중...`);
  let ok=0;
