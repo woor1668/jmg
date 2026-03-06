@@ -400,7 +400,7 @@ function renderRows(d){
  const rows=$('rows');let h='';
  for(const f of childFolders){
   const short=f.split('/').pop();
-  h+=`<div class="fl-row" ondblclick="nav('${f}')">
+  h+=`<div class="fl-row" onclick="nav('${f}')" style="cursor:pointer">
    <div></div>
    <div class="name"><span class="icon">📁</span><a onclick="nav('${f}')">${esc(short)}/</a></div>
    <div style="color:var(--tx2)">폴더</div><div style="color:var(--tx2)">—</div><div style="color:var(--tx2)">—</div>
