@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"jmg/internal/config"
 	"jmg/internal/database"
@@ -84,13 +85,22 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	hash := util.HashBytes(data)
 	folder := util.SanitizeFolder(r.FormValue("folder"))
 
+	// Strip directory from filename (some browsers send full path)
+	filename := header.Filename
+	if idx := strings.LastIndex(filename, "/"); idx >= 0 {
+		filename = filename[idx+1:]
+	}
+	if idx := strings.LastIndex(filename, "\\"); idx >= 0 {
+		filename = filename[idx+1:]
+	}
+
 	// Generate slug from filename or custom slug
 	customSlug := r.FormValue("slug")
 	var slug string
 	if customSlug != "" {
 		slug = util.SanitizeSlug(customSlug)
 	} else {
-		slug = util.ToSlug(header.Filename)
+		slug = util.ToSlug(filename)
 	}
 
 	// Ensure slug is unique in folder
